@@ -100,8 +100,3 @@ frontend/.cache/
 auth-service/target/
 blog-service/target/
 api-gateway/target/
-
-# Local configuration overrides
-*-local.yml
-*-local.yaml
-*-local.properties
