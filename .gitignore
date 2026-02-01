@@ -91,12 +91,10 @@ temp/
 .metadata/
 .recommenders/
 
+# Secrets (for demo only - DO NOT commit secrets in production)
+secrets/
+
 # Frontend build
 frontend/dist/
 frontend/.vite/
 frontend/.cache/
-
-# Backend compiled classes
-auth-service/target/
-blog-service/target/
-api-gateway/target/

@@ -100,7 +100,6 @@ public class AuthController {
             }
 
             Long userId = Long.parseLong(claims.getSubject());
-            String username = claims.get("username", String.class);
 
             // Verify user still exists
             User user = userRepository.findById(userId)

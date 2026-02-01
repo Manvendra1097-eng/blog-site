@@ -9,6 +9,8 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
+import org.springframework.security.web.server.header.XFrameOptionsServerHttpHeadersWriter;
+import org.springframework.security.web.server.header.XXssProtectionServerHttpHeadersWriter;
 
 import java.util.Arrays;
 import java.util.List;
@@ -39,8 +41,8 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .headers(headers -> headers
                         .contentTypeOptions(contentType -> {})
-                        .frameOptions(frame -> frame.mode(org.springframework.security.web.server.header.XFrameOptionsServerHttpHeadersWriter.Mode.DENY))
-                        .xssProtection(xss -> xss.headerValue(org.springframework.security.web.server.header.XXssProtectionServerHttpHeadersWriter.HeaderValue.ENABLED_MODE_BLOCK))
+                        .frameOptions(frame -> frame.mode(XFrameOptionsServerHttpHeadersWriter.Mode.DENY))
+                        .xssProtection(xss -> xss.headerValue(XXssProtectionServerHttpHeadersWriter.HeaderValue.ENABLED_MODE_BLOCK))
                 )
                 .authorizeExchange(exchanges -> exchanges
                         .anyExchange().permitAll()
