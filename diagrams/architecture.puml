@@ -1,0 +1,87 @@
+@startuml BlogSite_Architecture
+!theme plain
+skinparam defaultTextAlignment center
+skinparam componentStyle rectangle
+skinparam backgroundColor white
+skinparam shadowing false
+
+' Define colors
+skinparam component {
+    BackgroundColor<<frontend>> LightBlue
+    BorderColor<<frontend>> DarkBlue
+    BackgroundColor<<gateway>> Orange
+    BorderColor<<gateway>> DarkOrange
+    BackgroundColor<<auth>> LightGreen
+    BorderColor<<auth>> DarkGreen
+    BackgroundColor<<blog>> Plum
+    BorderColor<<blog>> Purple
+}
+
+skinparam database {
+    BackgroundColor LightGray
+    BorderColor DarkGray
+}
+
+' Components
+actor User as user
+cloud "Browser\nlocalhost:5173" as browser
+
+component "Frontend\n(React + Vite)\nPort: 5173" as frontend <<frontend>> {
+    [Pages]
+    [Axios Interceptor]
+    [UI Components]
+}
+
+component "API Gateway\n(Spring Cloud Gateway)\nPort: 8080" as gateway <<gateway>> {
+    [JWT Validation]
+    [Request Routing]
+    [CORS Config]
+}
+
+component "Auth Service\n(Spring Boot)\nPort: 8081" as auth <<auth>> {
+    [User Registration]
+    [Login/Auth]
+    [JWT Generation]
+    [Token Refresh]
+}
+
+component "Blog Service\n(Spring Boot)\nPort: 8082" as blog <<blog>> {
+    [Blog CRUD]
+    [Category Mgmt]
+    [Authorization]
+}
+
+database "MySQL\nblog_auth\nPort: 3306" as db_auth
+database "MySQL\nblog_content\nPort: 3306" as db_blog
+
+' Connections
+user --> browser : HTTP
+browser --> frontend : HTTP/HTTPS
+frontend --> gateway : REST API\n(JWT Bearer Token)
+gateway --> auth : /auth/**\n/refresh
+gateway --> blog : /blogs/**\n/categories
+auth --> db_auth : JDBC/JPA
+blog --> db_blog : JDBC/JPA
+
+' Notes
+note right of gateway
+  • Validates JWT tokens
+  • Enriches headers with
+    X-User-Id, X-User-Name,
+    X-User-Roles
+  • Routes to services
+end note
+
+note right of auth
+  • Access Token: 15 min
+  • Refresh Token: 7 days
+  • BCrypt password hash
+end note
+
+note right of blog
+  • Author-based access
+  • Category filtering
+  • Data seeding
+end note
+
+@enduml

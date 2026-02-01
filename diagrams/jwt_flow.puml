@@ -1,0 +1,114 @@
+@startuml JWT_Authentication_Flow
+!theme plain
+skinparam sequenceMessageAlign center
+skinparam backgroundColor white
+skinparam shadowing false
+
+title JWT Authentication Flow - BlogSite
+
+actor User
+participant "Browser\n(Frontend)" as Frontend
+participant "API Gateway\nPort: 8080" as Gateway
+participant "Auth Service\nPort: 8081" as Auth
+database "MySQL\nblog_auth" as DB
+
+== User Registration ==
+User -> Frontend: Enter credentials\n(username, password, role)
+Frontend -> Gateway: POST /auth/register
+Gateway -> Auth: Forward request
+Auth -> DB: Check if user exists
+DB --> Auth: User not found
+Auth -> Auth: Hash password\n(BCrypt)
+Auth -> DB: INSERT new user
+DB --> Auth: User created
+Auth --> Gateway: 201 Created
+Gateway --> Frontend: Success response
+Frontend --> User: "Registration successful"
+
+== Login & Token Generation ==
+User -> Frontend: Enter login credentials
+Frontend -> Gateway: POST /auth/login\n{username, password}
+Gateway -> Auth: Forward credentials
+Auth -> DB: SELECT user by username
+DB --> Auth: User record
+Auth -> Auth: Validate password\nBCrypt.matches()
+Auth -> Auth: Generate JWT tokens\n• Access Token (15 min)\n• Refresh Token (7 days)
+note right of Auth
+  Access Token Claims:
+  - sub: userId
+  - username
+  - roles
+  - type: "access"
+  - exp: 15 minutes
+  
+  Refresh Token Claims:
+  - sub: userId
+  - username
+  - roles
+  - type: "refresh"
+  - exp: 7 days
+end note
+Auth --> Gateway: 200 OK\n{accessToken, refreshToken}
+Gateway --> Frontend: Tokens returned
+Frontend -> Frontend: Store tokens\nlocalStorage
+Frontend --> User: "Login successful"
+
+== Authenticated API Request ==
+User -> Frontend: Request blog list
+Frontend -> Frontend: Get accessToken\nfrom localStorage
+Frontend -> Gateway: GET /blogs\nAuthorization: Bearer {accessToken}
+Gateway -> Gateway: Validate JWT\n• Verify signature\n• Check expiration\n• Extract user info
+Gateway -> Gateway: Add headers:\nX-User-Id\nX-User-Name\nX-User-Roles
+Gateway -> Auth: Forward with headers
+note right of Gateway
+  Gateway enriches request with:
+  X-User-Id: 1
+  X-User-Name: admin
+  X-User-Roles: ADMIN,USER
+end note
+Auth -> Auth: Process request\nusing user context
+Auth --> Gateway: Response data
+Gateway --> Frontend: 200 OK + data
+Frontend --> User: Display blogs
+
+== Access Token Expired ==
+User -> Frontend: Create new blog
+Frontend -> Gateway: POST /blogs\nAuthorization: Bearer {expired_token}
+Gateway -> Gateway: Validate JWT\nToken expired!
+Gateway --> Frontend: 401 Unauthorized
+Frontend -> Frontend: Axios Interceptor\ncatches 401
+
+== Automatic Token Refresh ==
+Frontend -> Gateway: POST /auth/refresh\nAuthorization: Bearer {refreshToken}
+Gateway -> Auth: Forward refresh request
+Auth -> Auth: Validate refresh token\n• Verify signature\n• Check type = "refresh"\n• Check expiration
+Auth -> DB: Verify user exists
+DB --> Auth: User found
+Auth -> Auth: Generate new tokens\n• New Access Token\n• New Refresh Token
+Auth --> Gateway: 200 OK\n{accessToken, refreshToken}
+Gateway --> Frontend: New token pair
+Frontend -> Frontend: Update localStorage\nwith new tokens
+
+== Retry Original Request ==
+Frontend -> Gateway: POST /blogs\nAuthorization: Bearer {new_accessToken}
+Gateway -> Gateway: Validate JWT\nToken valid!
+Gateway -> Auth: Forward request
+Auth -> DB: INSERT blog
+DB --> Auth: Blog created
+Auth --> Gateway: 201 Created
+Gateway --> Frontend: Success
+Frontend --> User: "Blog created!"
+
+== Refresh Token Expired ==
+User -> Frontend: Action after 7 days
+Frontend -> Gateway: POST /blogs\nAuthorization: Bearer {expired_accessToken}
+Gateway --> Frontend: 401 Unauthorized
+Frontend -> Gateway: POST /auth/refresh\nAuthorization: Bearer {expired_refreshToken}
+Gateway -> Auth: Forward request
+Auth -> Auth: Validate token\nRefresh token expired!
+Auth --> Gateway: 401 Unauthorized
+Gateway --> Frontend: Refresh failed
+Frontend -> Frontend: Clear localStorage\nRedirect to login
+Frontend --> User: "Session expired\nPlease login again"
+
+@enduml

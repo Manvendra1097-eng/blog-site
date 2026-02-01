@@ -1,0 +1,145 @@
+@startuml API_Gateway_Flow
+!theme plain
+skinparam sequenceMessageAlign center
+skinparam backgroundColor white
+skinparam shadowing false
+
+title API Gateway Request Processing Flow
+
+actor User
+participant "Frontend\nReact App" as Frontend
+participant "API Gateway\nPort: 8080" as Gateway
+box "Gateway Filters" #LightYellow
+    participant "CORS Filter" as CORS
+    participant "JWT Validator" as JWT
+    participant "Auth Filter" as AuthFilter
+    participant "Router" as Router
+end box
+participant "Auth Service\n8081" as AuthService
+participant "Blog Service\n8082" as BlogService
+database "MySQL" as DB
+
+== Request Arrives at Gateway ==
+User -> Frontend: Click "Create Blog"
+Frontend -> Frontend: Prepare request\n+ JWT from localStorage
+Frontend -> Gateway: POST /blogs\nAuthorization: Bearer {JWT}\nBody: {blogName, article...}
+
+== Step 1: CORS Validation ==
+Gateway -> CORS: Check CORS policy
+note right of CORS
+  CORS Configuration:
+  - Allowed Origins: http://localhost:5173
+  - Allowed Methods: GET, POST, PUT, DELETE
+  - Allowed Headers: Authorization, Content-Type
+  - Expose Headers: *
+  - Max Age: 3600s
+end note
+CORS -> CORS: Validate origin\nCheck allowed methods
+alt CORS validation fails
+    CORS --> Gateway: 403 Forbidden
+    Gateway --> Frontend: CORS error
+else CORS validation succeeds
+    CORS -> JWT: Continue
+end
+
+== Step 2: JWT Validation ==
+JWT -> JWT: Extract token from\nAuthorization header
+note right of JWT
+  Token Format:
+  Authorization: Bearer eyJhbGciOiJIUzI1Ni...
+end note
+
+JWT -> JWT: Decode JWT
+JWT -> JWT: Verify signature\nusing secret key
+JWT -> JWT: Check expiration\nexp claim
+JWT -> JWT: Validate claims\n(sub, username, roles)
+JWT -> JWT: Check token type\ntype = "access"
+
+alt JWT validation fails
+    JWT --> Gateway: 401 Unauthorized\n{error: "Invalid token"}
+    Gateway --> Frontend: 401 response
+    Frontend -> Frontend: Trigger token refresh
+else JWT validation succeeds
+    JWT -> AuthFilter: Token valid\nUser info extracted
+end
+
+== Step 3: Authentication Filter ==
+AuthFilter -> AuthFilter: Extract user info:\n• userId = claims.sub\n• username = claims.username\n• roles = claims.roles
+note right of AuthFilter
+  Extracted Information:
+  - User ID: 1
+  - Username: admin
+  - Roles: ADMIN,USER
+end note
+
+AuthFilter -> AuthFilter: Enrich request headers:\nX-User-Id: 1\nX-User-Name: admin\nX-User-Roles: ADMIN,USER
+AuthFilter -> Router: Pass enriched request
+
+== Step 4: Request Routing ==
+Router -> Router: Match request path\n/blogs/** → Blog Service
+note right of Router
+  Routing Configuration:
+  - /auth/** → Auth Service (8081)
+  - /blogs/** → Blog Service (8082)
+  - /categories → Blog Service (8082)
+end note
+
+alt Route to Auth Service
+    Router -> AuthService: Forward to\nhttp://localhost:8081
+    AuthService -> DB: Process request
+    DB --> AuthService: Response
+    AuthService --> Router: Result
+else Route to Blog Service
+    Router -> BlogService: Forward to\nhttp://localhost:8082\n+ User headers
+    BlogService -> BlogService: Extract user from\nSecurity Context\n(X-User-Id header)
+    BlogService -> DB: Execute operation\nwith user context
+    DB --> BlogService: Result
+    BlogService --> Router: Response
+end
+
+== Step 5: Return Response ==
+Router -> Gateway: Service response
+Gateway -> Gateway: Add response headers\n(CORS headers)
+Gateway --> Frontend: 200/201 response\n+ data
+Frontend --> User: Display result
+
+== Error Scenarios ==
+
+group Service Unavailable
+    Router -> BlogService: Forward request
+    BlogService --> Router: Connection refused
+    Router -> Gateway: 503 Service Unavailable
+    note right of Gateway
+      Error Response:
+      {
+        "timestamp": "2026-02-01T12:00:00",
+        "status": 503,
+        "error": "Service Unavailable",
+        "message": "Blog service temporarily unavailable"
+      }
+    end note
+    Gateway --> Frontend: 503 error
+    Frontend --> User: "Service unavailable"
+end
+
+group Authorization Failed
+    Router -> BlogService: Forward request
+    BlogService -> BlogService: Check if user\nis blog author
+    BlogService -> BlogService: Authorization failed!\nNot the author
+    BlogService --> Router: 403 Forbidden
+    Router -> Gateway: 403 response
+    Gateway --> Frontend: Forbidden error
+    Frontend --> User: "You can't edit\nthis blog"
+end
+
+group Validation Error
+    Router -> BlogService: Forward request
+    BlogService -> BlogService: Validate input\n@Valid annotation
+    BlogService -> BlogService: Validation failed:\nTitle too short
+    BlogService --> Router: 400 Bad Request\n{validationErrors}
+    Router -> Gateway: 400 response
+    Gateway --> Frontend: Validation errors
+    Frontend --> User: "Title must be\nat least 3 characters"
+end
+
+@enduml

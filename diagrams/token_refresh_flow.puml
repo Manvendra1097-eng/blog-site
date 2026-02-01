@@ -1,0 +1,112 @@
+@startuml Token_Refresh_Flow
+!theme plain
+skinparam sequenceMessageAlign center
+skinparam backgroundColor white
+skinparam shadowing false
+
+title Automatic Token Refresh Flow (Axios Interceptor)
+
+participant "React Component" as Component
+participant "Axios Client" as Axios
+box "Axios Interceptors" #LightBlue
+    participant "Request\nInterceptor" as ReqInt
+    participant "Response\nInterceptor" as ResInt
+end box
+participant "API Gateway" as Gateway
+participant "Auth Service" as Auth
+database "localStorage" as Storage
+
+== Initial API Call ==
+Component -> Axios: POST /blogs/create\n{blogData}
+Axios -> ReqInt: Intercept request
+
+ReqInt -> Storage: Get accessToken
+Storage --> ReqInt: accessToken (expired)
+note right of Storage
+  Tokens in localStorage:
+  - accessToken (expired 5 min ago)
+  - refreshToken (valid for 6 more days)
+end note
+
+ReqInt -> ReqInt: Add Authorization header:\nBearer {accessToken}
+ReqInt -> Gateway: POST /blogs\nAuthorization: Bearer {expired_token}
+
+== Gateway Rejects Expired Token ==
+Gateway -> Gateway: Validate JWT\nToken expired!
+Gateway --> Axios: 401 Unauthorized\n{error: "Token expired"}
+
+== Response Interceptor Catches 401 ==
+Axios -> ResInt: Catch 401 error
+ResInt -> ResInt: Check error status\nstatus === 401
+ResInt -> ResInt: Verify not already\nrefreshing token
+
+== Attempt Token Refresh ==
+ResInt -> Storage: Get refreshToken
+Storage --> ResInt: refreshToken
+ResInt -> Gateway: POST /auth/refresh\nAuthorization: Bearer {refreshToken}
+note right of ResInt
+  Refresh Request:
+  - URL: /auth/refresh
+  - Method: POST
+  - Headers: {
+      Authorization: "Bearer {refreshToken}"
+    }
+end note
+
+Gateway -> Auth: Forward refresh request
+Auth -> Auth: Validate refresh token:\n• Signature valid\n• Type = "refresh"\n• Not expired
+Auth -> Auth: Generate new tokens:\n• New Access Token (15 min)\n• New Refresh Token (7 days)
+Auth --> Gateway: 200 OK\n{accessToken, refreshToken}
+Gateway --> ResInt: New token pair
+
+== Update Stored Tokens ==
+ResInt -> Storage: Update tokens\nsetItem('accessToken')\nsetItem('refreshToken')
+Storage --> ResInt: Tokens updated
+note right of Storage
+  Updated localStorage:
+  - accessToken (fresh, valid 15 min)
+  - refreshToken (fresh, valid 7 days)
+end note
+
+== Retry Original Request ==
+ResInt -> ResInt: Get original failed request\nconfig
+ResInt -> ResInt: Update Authorization header:\nBearer {new_accessToken}
+ResInt -> Gateway: POST /blogs\nAuthorization: Bearer {new_accessToken}\n{blogData}
+
+Gateway -> Gateway: Validate JWT\nToken valid!
+Gateway -> Auth: Forward request
+Auth --> Gateway: 201 Created\n{blog}
+Gateway --> ResInt: Success response
+
+== Return to Component ==
+ResInt -> Axios: Return response
+Axios -> Component: Resolved promise\n{blog}
+Component -> Component: Display success:\n"Blog created!"
+
+note over Component
+  User Experience:
+  - User never saw the error
+  - No redirect to login
+  - Seamless experience
+  - Token refreshed automatically
+end note
+
+== Refresh Token Also Expired ==
+group Both Tokens Expired
+    Component -> Axios: POST /blogs
+    Axios -> Gateway: Request with expired token
+    Gateway --> Axios: 401 Unauthorized
+    Axios -> ResInt: Catch 401
+    ResInt -> Gateway: POST /auth/refresh\nBearer {expired_refreshToken}
+    Gateway -> Auth: Validate refresh token
+    Auth -> Auth: Refresh token expired!
+    Auth --> Gateway: 401 Unauthorized
+    Gateway --> ResInt: Refresh failed
+
+    ResInt -> Storage: Clear all tokens\nremoveItem('accessToken')\nremoveItem('refreshToken')
+    ResInt -> ResInt: Redirect to login\nwindow.location = '/login'
+    ResInt --> Component: Throw error
+    Component -> Component: Show message:\n"Session expired"
+end
+
+@enduml

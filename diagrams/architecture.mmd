@@ -1,0 +1,37 @@
+graph TB
+    subgraph Client["Client Layer"]
+        Browser["Browser<br/>localhost:5173"]
+    end
+
+    subgraph Frontend["Frontend Layer (Port 5173)"]
+        React["React + Vite<br/>• Login/Register Pages<br/>• Blog Management UI<br/>• Axios Interceptor"]
+    end
+
+    subgraph Gateway["API Gateway Layer (Port 8080)"]
+        GW["Spring Cloud Gateway<br/>• JWT Validation<br/>• Request Routing<br/>• CORS Configuration<br/>• Header Enrichment"]
+    end
+
+    subgraph Services["Microservices Layer"]
+        Auth["Auth Service (Port 8081)<br/>Spring Boot<br/>• User Registration<br/>• Login/Authentication<br/>• JWT Token Generation<br/>• Token Refresh<br/>• BCrypt Encryption"]
+        Blog["Blog Service (Port 8082)<br/>Spring Boot<br/>• Blog CRUD Operations<br/>• Category Management<br/>• Author Authorization<br/>• Data Seeding"]
+    end
+
+    subgraph Database["Database Layer (Port 3306)"]
+        DB1[("MySQL<br/>blog_auth<br/>• users<br/>• roles")]
+        DB2[("MySQL<br/>blog_content<br/>• blogs<br/>• categories")]
+    end
+
+    Browser -->|HTTP/HTTPS| React
+    React -->|REST API<br/>Bearer JWT| GW
+    GW -->|/auth/**<br/>/refresh| Auth
+    GW -->|/blogs/**<br/>/categories| Blog
+    Auth -->|JPA/Hibernate| DB1
+    Blog -->|JPA/Hibernate| DB2
+
+    style Browser fill:#e3f2fd
+    style React fill:#3498db,color:#fff
+    style GW fill:#e67e22,color:#fff
+    style Auth fill:#2ecc71,color:#fff
+    style Blog fill:#9b59b6,color:#fff
+    style DB1 fill:#7f8c8d,color:#fff
+    style DB2 fill:#7f8c8d,color:#fff
