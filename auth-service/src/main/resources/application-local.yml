@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: auth-service
+  datasource:
+    url: jdbc:mysql://localhost:3306/blog_auth?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
+    username: root
+    password: Manvendra
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      "[hibernate.dialect]": org.hibernate.dialect.MySQLDialect
+    defer-datasource-initialization: true
+
+server:
+  port: 8081
+
+# JWT Configuration
+security:
+  jwt:
+    secret: Z3NqR0ZlV1R2cVN6Z2pYQ3Z5cE5wV3pQd2J2QmR4RGw=

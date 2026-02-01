@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: api-gateway
+  main:
+    web-application-type: reactive
+  cloud:
+    gateway:
+      routes:
+        - id: auth-register-login
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/v1.0/blogsite/user/register,/api/v1.0/blogsite/user/login,/api/v1.0/blogsite/user/refresh
+        - id: blog-category
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/v1.0/blogsite/category/**
+        - id: blog-user
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/v1.0/blogsite/user/**
+        - id: blog-public
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/v1.0/blogsite/blogs/**
+
+server:
+  port: 8080
+
+# CORS Configuration
+cors:
+  allowed-origins: http://localhost:*,http://127.0.0.1:*
+  allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+  allowed-headers: Authorization,Content-Type,Accept
+  allow-credentials: true
+  max-age: 3600
+
+# JWT Configuration
+security:
+  jwt:
+    secret: Z3NqR0ZlV1R2cVN6Z2pYQ3Z5cE5wV3pQd2J2QmR4RGw=

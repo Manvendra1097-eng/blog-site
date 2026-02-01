@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: blog-service
+  datasource:
+    url: jdbc:mysql://localhost:3306/blog_content?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
+    username: root
+    password: Manvendra
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      "[hibernate.dialect]": org.hibernate.dialect.MySQLDialect
+    defer-datasource-initialization: true
+
+server:
+  port: 8082
