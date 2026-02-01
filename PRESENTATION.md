@@ -211,19 +211,6 @@ A microservices-based blogging platform with:
 - ✅ Gateway-level authentication
 - ✅ Secure headers (X-User-Id, X-User-Name, X-User-Roles)
 
-### Why We Removed Redis
-**Before:** Used Redis for JWT blacklist
-**Problem:**
-- Added infrastructure complexity
-- No user deletion feature (blacklist never used)
-- Overkill for the use case
-
-**After:** Token refresh pattern
-- Simpler architecture
-- Short-lived access tokens
-- No blacklist needed
-- Better security with token type validation
-
 ---
 
 ## 6. Technical Highlights
@@ -522,41 +509,7 @@ stop-services.bat
 
 ---
 
-## 10. Challenges & Solutions
-
-### Challenge 1: Token Expiration UX
-**Problem:** Users logged out every 15 minutes
-**Solution:** Implemented automatic token refresh with axios interceptors
-**Result:** Seamless 7-day sessions without user interruption
-
-### Challenge 2: Redis Complexity
-**Problem:** Redis added infrastructure overhead with no real benefit
-**Solution:** Removed Redis, used short-lived access tokens with refresh tokens
-**Result:** Simpler architecture, easier deployment, same security
-
-### Challenge 3: Redundant Code
-**Problem:** Manual `@RequestHeader` reading in every controller method
-**Solution:** Integrated Spring Security context, created helper methods
-**Result:** Cleaner code, better maintainability, follows Spring conventions
-
-### Challenge 4: CORS Issues
-**Problem:** Frontend on different port causing CORS errors
-**Solution:** Configured CORS in API Gateway with proper headers
-**Result:** Smooth frontend-backend communication
-
-### Challenge 5: Database Seeding
-**Problem:** Test data not loading on startup
-**Solution:** Added `defer-datasource-initialization: true`
-**Result:** Tables created before seeders run
-
-### Challenge 6: JWT Secret Management
-**Problem:** Different secret configuration paths in services
-**Solution:** Standardized to `security.jwt.secret` across all services
-**Result:** Consistent configuration, easier management
-
----
-
-## 11. Future Enhancements
+## 10. Future Enhancements
 
 ### Security
 - [ ] HttpOnly cookies for tokens (prevent XSS)
@@ -603,9 +556,6 @@ stop-services.bat
 
 - **Total Services:** 3 (Auth, Blog, Gateway)
 - **Total Endpoints:** 12+ REST APIs
-- **Lines of Code:**
-  - Backend: ~3,500 lines
-  - Frontend: ~1,200 lines
 - **Test Data:** 2 users, 3 categories, 2 blogs
 - **Setup Time:** < 2 minutes
 - **Security:** JWT with dual tokens, automatic refresh
@@ -631,31 +581,6 @@ stop-services.bat
 ✅ Code refactoring
 ✅ Documentation
 ✅ Project presentation
-
----
-
-## 📞 Questions & Answers
-
-### Q: Why microservices instead of monolith?
-**A:** Microservices offer independent scaling, deployment, and technology choices. Each service can be developed and deployed independently, enabling faster iterations and better team autonomy.
-
-### Q: How do you handle distributed transactions?
-**A:** Each service manages its own database. For complex operations spanning services, we use eventual consistency or saga patterns (future enhancement).
-
-### Q: What about token revocation?
-**A:** Currently handled by short-lived access tokens. For immediate revocation, we can add database-backed refresh tokens (future enhancement).
-
-### Q: How does this scale?
-**A:** Each service can be scaled independently. API Gateway can handle load balancing. Add Redis for caching, use Kubernetes for orchestration.
-
-### Q: Production readiness?
-**A:** Need to add:
-- Environment-specific configurations
-- Proper logging and monitoring
-- Error handling improvements
-- Rate limiting
-- Backup strategies
-- Health checks
 
 ---
 
@@ -686,9 +611,3 @@ BlogSite demonstrates a modern, scalable approach to building web applications u
 - React Documentation: https://react.dev/
 
 ---
-
-**Thank You!**
-
-**Project Repository:** [Your GitHub Link]
-**Contact:** [Your Email]
-**Date:** February 2026
