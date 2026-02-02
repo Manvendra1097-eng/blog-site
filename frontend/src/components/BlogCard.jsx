@@ -1,7 +1,20 @@
-export default function BlogCard({ blog, onViewDetails }) {
+import { memo } from "react";
+import { useNavigate } from "react-router-dom";
+import { formatDate, getCategoryName, truncate } from "../lib/blogUtils.js";
+
+const BlogCard = memo(function BlogCard({ blog }) {
+    const navigate = useNavigate();
+    const snippet = blog.article
+        ? truncate(blog.article, 150)
+        : blog.articleSnippet;
+
+    const handleClick = () => {
+        navigate(`/blog/${blog.id}`);
+    };
+
     return (
         <article
-            onClick={() => onViewDetails(blog)}
+            onClick={handleClick}
             className="group rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:shadow-md hover:border-primary/50 cursor-pointer"
         >
             <div className="space-y-3">
@@ -10,30 +23,19 @@ export default function BlogCard({ blog, onViewDetails }) {
                         {blog.blogName}
                     </h4>
                     <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary shrink-0">
-                        {blog.category?.name || "Tech"}
+                        {getCategoryName(blog)}
                     </span>
                 </div>
 
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span className="font-medium">{blog.authorName}</span>
                     <span>•</span>
-                    <time>
-                        {blog.createdAt
-                            ? new Date(blog.createdAt).toLocaleDateString(
-                                  "en-US",
-                                  {
-                                      month: "short",
-                                      day: "numeric",
-                                      year: "numeric",
-                                  },
-                              )
-                            : ""}
-                    </time>
+                    <time>{formatDate(blog.createdAt)}</time>
                 </div>
 
-                {blog.articleSnippet && (
+                {snippet && (
                     <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
-                        {blog.articleSnippet}
+                        {snippet}
                     </p>
                 )}
 
@@ -45,4 +47,6 @@ export default function BlogCard({ blog, onViewDetails }) {
             </div>
         </article>
     );
-}
+});
+
+export default BlogCard;

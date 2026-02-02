@@ -1,9 +1,11 @@
 import axios from "axios";
-import { API_BASE } from "../config/apiConfig.js";
+import { API_BASE, API_PREFIX } from "../config/apiConfig.js";
+import { storage, STORAGE_KEYS } from "../lib/storage.js";
 
 // Create axios instance with base configuration
 const apiClient = axios.create({
     baseURL: API_BASE,
+    withCredentials: true,
     headers: {
         "Content-Type": "application/json",
     },
@@ -15,7 +17,7 @@ let refreshPromise = null;
 // Request interceptor - Add access token to every request
 apiClient.interceptors.request.use(
     (config) => {
-        const token = window.localStorage.getItem("blog_token");
+        const token = storage.get(STORAGE_KEYS.TOKEN);
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -53,9 +55,8 @@ apiClient.interceptors.response.use(
                 return apiClient(originalRequest);
             } catch (refreshError) {
                 // Refresh failed - logout
-                window.localStorage.removeItem("blog_token");
-                window.localStorage.removeItem("blog_refresh_token");
-                window.localStorage.removeItem("blog_username");
+                storage.remove(STORAGE_KEYS.TOKEN);
+                storage.remove(STORAGE_KEYS.USERNAME);
                 window.location.href = "/login";
                 return Promise.reject(refreshError);
             }
@@ -67,26 +68,21 @@ apiClient.interceptors.response.use(
 
 // Function to refresh the access token
 async function refreshAccessToken() {
-    const refreshToken = window.localStorage.getItem("blog_refresh_token");
-    if (!refreshToken) {
-        throw new Error("No refresh token available");
-    }
-
     try {
         // Use axios directly (not apiClient) to avoid interceptor recursion
         const response = await axios.post(
-            `${API_BASE}/api/v1.0/blogsite/user/refresh`,
-            { refreshToken },
+            `${API_BASE}${API_PREFIX}/user/refresh`,
+            {},
             {
+                withCredentials: true,
                 headers: {
                     "Content-Type": "application/json",
                 },
             },
         );
 
-        const { accessToken, refreshToken: newRefreshToken } = response.data;
-        window.localStorage.setItem("blog_token", accessToken);
-        window.localStorage.setItem("blog_refresh_token", newRefreshToken);
+        const { accessToken } = response.data;
+        storage.set(STORAGE_KEYS.TOKEN, accessToken);
 
         return accessToken;
     } catch (error) {

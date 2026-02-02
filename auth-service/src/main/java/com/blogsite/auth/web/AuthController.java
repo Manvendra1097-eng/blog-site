@@ -12,8 +12,11 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -76,17 +79,26 @@ public class AuthController {
         User user = userOpt.get();
         String accessToken = jwtService.generateAccessToken(user.getId(), user.getUsername(), user.getRoles());
         String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getUsername(), user.getRoles());
-        return ResponseEntity.ok(Map.of(
+
+        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshToken)
+            .httpOnly(true)
+            .secure(false)
+            .path("/")
+            .sameSite("Lax")
+            .maxAge(7 * 24 * 60 * 60)
+            .build();
+
+        return ResponseEntity.ok()
+            .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+            .body(Map.of(
                 "accessToken", accessToken,
-                "refreshToken", refreshToken,
                 "username", user.getUsername(),
                 "roles", user.getRoles()
-        ));
+            ));
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<?> refresh(@RequestBody Map<String, String> request) {
-        String refreshToken = request.get("refreshToken");
+        public ResponseEntity<?> refresh(@CookieValue(name = "refreshToken", required = false) String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) {
             throw new IllegalArgumentException("Refresh token required");
         }
@@ -106,17 +118,42 @@ public class AuthController {
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
             // Generate new tokens
-            String newAccessToken = jwtService.generateAccessToken(user.getId(), user.getUsername(), user.getRoles());
-            String newRefreshToken = jwtService.generateRefreshToken(user.getId(), user.getUsername(), user.getRoles());
+                String newAccessToken = jwtService.generateAccessToken(user.getId(), user.getUsername(), user.getRoles());
+                String newRefreshToken = jwtService.generateRefreshToken(user.getId(), user.getUsername(), user.getRoles());
 
-            return ResponseEntity.ok(Map.of(
-                    "accessToken", newAccessToken,
-                    "refreshToken", newRefreshToken,
-                    "username", user.getUsername()
-            ));
+                ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", newRefreshToken)
+                    .httpOnly(true)
+                    .secure(false)
+                    .path("/")
+                    .sameSite("Lax")
+                    .maxAge(7 * 24 * 60 * 60)
+                    .build();
+
+                return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                    .body(Map.of(
+                        "accessToken", newAccessToken,
+                        "username", user.getUsername()
+                    ));
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid or expired refresh token");
         }
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout() {
+        // Clear the refresh token cookie
+        ResponseCookie clearCookie = ResponseCookie.from("refreshToken", "")
+            .httpOnly(true)
+            .secure(false)
+            .path("/")
+            .sameSite("Lax")
+            .maxAge(0)  // Expire immediately
+            .build();
+
+        return ResponseEntity.ok()
+            .header(HttpHeaders.SET_COOKIE, clearCookie.toString())
+            .body(Map.of("message", "Logged out successfully"));
     }
 
     @GetMapping("/verify/{userId}")

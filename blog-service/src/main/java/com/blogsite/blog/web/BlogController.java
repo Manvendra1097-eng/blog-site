@@ -79,6 +79,11 @@ public class BlogController {
         return ResponseEntity.ok(Map.of("id", category.getId(), "name", category.getName()));
     }
 
+    @GetMapping("/categories")
+    public ResponseEntity<List<Category>> getAllCategories() {
+        return ResponseEntity.ok(blogService.getAllCategories());
+    }
+
     @PostMapping("/user/blogs/add/{blogname}")
     public ResponseEntity<?> addBlog(
             @PathVariable("blogname") String blogName,
@@ -96,6 +101,15 @@ public class BlogController {
     @GetMapping("/blogs/all")
     public ResponseEntity<List<Blog>> getAllBlogs() {
         return ResponseEntity.ok(blogService.getAllBlogs());
+    }
+
+    @GetMapping("/blogs/{id}")
+    public ResponseEntity<Blog> getBlogById(@PathVariable("id") Long id) {
+        Blog blog = blogService.getBlogById(id);
+        if (blog == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(blog);
     }
 
     @DeleteMapping("/user/delete/{blogname}")

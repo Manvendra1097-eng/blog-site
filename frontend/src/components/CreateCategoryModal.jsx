@@ -1,31 +1,42 @@
-import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { createCategoryRequest } from "../services/blogApi.js";
-import { toast } from "./ui/toaster.jsx";
+import { toast } from "sonner";
+import { categorySchema } from "../lib/schemas.js";
+import { useAuth } from "../context/useAuth.js";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from "./ui/dialog.jsx";
+import { Button } from "./ui/button.jsx";
 
-export default function CreateCategoryModal({
-    auth,
-    onClose,
-    onCategoryCreated,
-}) {
-    const [categoryName, setCategoryName] = useState("");
-    const [creating, setCreating] = useState(false);
+export default function CreateCategoryModal({ onClose, onCategoryCreated }) {
+    const auth = useAuth();
+    const {
+        register,
+        handleSubmit,
+        formState: { errors, isSubmitting },
+        watch,
+    } = useForm({
+        resolver: zodResolver(categorySchema),
+        defaultValues: {
+            name: "",
+        },
+    });
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    const name = watch("name");
 
-        if (!categoryName || categoryName.length < 3) {
-            toast.error("Category name must be at least 3 characters");
-            return;
-        }
-
-        setCreating(true);
+    const onSubmit = async (data) => {
         try {
             await createCategoryRequest({
                 token: auth.token,
-                name: categoryName,
+                name: data.name,
             });
             toast.success("Category created successfully!");
-            setCategoryName("");
             setTimeout(() => {
                 onClose();
                 if (onCategoryCreated) {
@@ -34,65 +45,78 @@ export default function CreateCategoryModal({
             }, 1000);
         } catch (err) {
             toast.error(err.message || "Failed to create category");
-        } finally {
-            setCreating(false);
         }
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-card rounded-lg border border-border shadow-lg max-w-md w-full">
-                <div className="p-6 border-b border-border">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-semibold">
-                            Create New Category
-                        </h2>
-                        <button
-                            onClick={onClose}
-                            className="rounded-md p-2 hover:bg-accent"
-                        >
-                            ✕
-                        </button>
-                    </div>
-                </div>
+        <Dialog open={true} onOpenChange={onClose}>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Create New Category</DialogTitle>
+                    <DialogDescription>
+                        Create a new category for blog posts
+                    </DialogDescription>
+                </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">
+                        <label
+                            htmlFor="category-name"
+                            className="text-sm font-medium"
+                        >
                             Category Name (min 3 characters)
                         </label>
                         <input
+                            id="category-name"
                             type="text"
-                            value={categoryName}
-                            onChange={(e) => setCategoryName(e.target.value)}
-                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            {...register("name")}
+                            className="w-full px-3 py-2 border border-input rounded-md bg-background"
                             placeholder="e.g., Technology, Travel, Food"
                             autoFocus
+                            aria-required="true"
+                            aria-invalid={!!errors.name}
+                            aria-describedby={
+                                errors.name
+                                    ? "category-name-error"
+                                    : "category-name-hint"
+                            }
                         />
-                        <p className="text-xs text-muted-foreground">
-                            Create a new category for blog posts
+                        {errors.name && (
+                            <p
+                                id="category-name-error"
+                                className="text-xs text-destructive"
+                                role="alert"
+                            >
+                                {errors.name.message}
+                            </p>
+                        )}
+                        <p
+                            id="category-name-hint"
+                            className="text-xs text-muted-foreground"
+                        >
+                            {name?.length || 0}/3 characters
                         </p>
                     </div>
 
-                    <div className="flex gap-3">
-                        <button
+                    <DialogFooter>
+                        <Button
                             type="button"
+                            variant="outline"
                             onClick={onClose}
-                            disabled={creating}
-                            className="flex-1 rounded-md border border-input px-4 py-2 text-sm font-medium hover:bg-accent disabled:opacity-50"
+                            disabled={isSubmitting}
                         >
                             Cancel
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             type="submit"
-                            disabled={creating}
-                            className="flex-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:opacity-50"
+                            disabled={isSubmitting}
+                            aria-busy={isSubmitting}
                         >
-                            {creating ? "Creating..." : "Create Category"}
-                        </button>
-                    </div>
+                            {isSubmitting ? "Creating..." : "Create Category"}
+                        </Button>
+                    </DialogFooter>
                 </form>
-            </div>
-        </div>
+            </DialogContent>
+        </Dialog>
     );
 }

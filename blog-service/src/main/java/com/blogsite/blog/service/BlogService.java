@@ -101,6 +101,10 @@ public class BlogService {
         return blogRepository.findAll();
     }
 
+    public Blog getBlogById(Long id) {
+        return blogRepository.findById(id).orElse(null);
+    }
+
     public List<Blog> getByCategory(String categoryName) {
         return blogRepository.findByCategoryName(categoryName);
     }
@@ -131,5 +135,9 @@ public class BlogService {
         Category category = new Category();
         category.setName(name);
         return categoryRepository.save(category);
+    }
+
+    public List<Category> getAllCategories() {
+        return categoryRepository.findAll();
     }
 }

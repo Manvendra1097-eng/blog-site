@@ -1,82 +1,93 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
 import { API_BASE } from "../config/apiConfig.js";
-import { toast } from "../components/ui/toaster.jsx";
+import { toast } from "sonner";
+import { loginSchema, registerSchema } from "../lib/schemas.js";
+import { Button } from "../components/ui/button.jsx";
+import { useAuth } from "../context/useAuth.js";
 
-export default function LoginPage({ auth }) {
+export default function LoginPage() {
+    const navigate = useNavigate();
+    const auth = useAuth();
     const [isLogin, setIsLogin] = useState(true);
-    const [formData, setFormData] = useState({
-        username: "admin",
-        password: "Admin1234",
-        email: "",
-    });
-    const [error, setError] = useState("");
-    const [loading, setLoading] = useState(false);
 
-    const handleLoginSubmit = async (e) => {
-        e.preventDefault();
-        setError("");
-        await auth.login(formData.username, formData.password);
+    useEffect(() => {
+        if (auth.isAuthenticated) {
+            navigate("/", { replace: true });
+        }
+    }, [auth.isAuthenticated, navigate]);
+
+    const {
+        register: registerLogin,
+        handleSubmit: handleLoginSubmit,
+        formState: { errors: loginErrors, isSubmitting: isLoginSubmitting },
+    } = useForm({
+        resolver: zodResolver(loginSchema),
+        defaultValues: {
+            username: "",
+            password: "",
+        },
+    });
+
+    const {
+        register: registerRegister,
+        handleSubmit: handleRegisterSubmit,
+        formState: {
+            errors: registerErrors,
+            isSubmitting: isRegisterSubmitting,
+        },
+        reset,
+    } = useForm({
+        resolver: zodResolver(registerSchema),
+        defaultValues: {
+            username: "",
+            email: "",
+            password: "",
+        },
+    });
+
+    const onLoginSubmit = async (data) => {
+        const success = await auth.login(data.username, data.password);
+        if (success) {
+            navigate("/", { replace: true });
+        }
     };
 
-    const handleRegisterSubmit = async (e) => {
-        e.preventDefault();
-        setError("");
-
-        // Validation
-        if (formData.username.length < 3) {
-            toast.error("Username must be at least 3 characters");
-            return;
-        }
-        if (formData.password.length < 8) {
-            toast.error("Password must be at least 8 characters");
-            return;
-        }
-        if (!/(?=.*[A-Za-z])(?=.*[0-9])/.test(formData.password)) {
-            toast.error("Password must be alphanumeric");
-            return;
-        }
-        if (!formData.email.match(/.+@.+\..+/)) {
-            toast.error("Please enter a valid email");
-            return;
-        }
-
-        setLoading(true);
+    const onRegisterSubmit = async (data) => {
         try {
-            await axios.post(
-                `${API_BASE}/api/v1.0/blogsite/user/register`,
-                {
-                    username: formData.username,
-                    email: formData.email,
-                    password: formData.password,
-                },
-            );
+            await axios.post(`${API_BASE}/api/v1.0/blogsite/user/register`, {
+                username: data.username,
+                email: data.email,
+                password: data.password,
+            });
 
             // Registration successful, switch to login
-            setError("");
             setIsLogin(true);
-            setFormData({
-                username: formData.username,
-                password: formData.password,
+            reset({
+                username: "",
                 email: "",
+                password: "",
             });
             toast.success("Registration successful! Please login.");
         } catch (err) {
-            toast.error(err.message || "Registration failed");
-        } finally {
-            setLoading(false);
+            const errorMessage =
+                err.response?.data?.message ||
+                err.response?.data?.error ||
+                err.message ||
+                "Registration failed";
+            toast.error(errorMessage);
         }
     };
 
     const switchMode = () => {
         setIsLogin(!isLogin);
-        setError("");
-        setFormData({
-            username: "",
-            password: "",
-            email: "",
-        });
     };
+
+    const errors = isLogin ? loginErrors : registerErrors;
+    const isSubmitting = isLogin ? isLoginSubmitting : isRegisterSubmitting;
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -95,113 +106,151 @@ export default function LoginPage({ auth }) {
 
                     <form
                         onSubmit={
-                            isLogin ? handleLoginSubmit : handleRegisterSubmit
+                            isLogin
+                                ? handleLoginSubmit(onLoginSubmit)
+                                : handleRegisterSubmit(onRegisterSubmit)
                         }
                         className="space-y-4"
+                        aria-label={
+                            isLogin ? "Login form" : "Registration form"
+                        }
                     >
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">
+                            <label
+                                htmlFor="username"
+                                className="text-sm font-medium"
+                            >
                                 Username
                             </label>
                             <input
+                                id="username"
                                 type="text"
-                                value={formData.username}
-                                onChange={(e) =>
-                                    setFormData({
-                                        ...formData,
-                                        username: e.target.value,
-                                    })
-                                }
+                                {...(isLogin
+                                    ? registerLogin("username")
+                                    : registerRegister("username"))}
                                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                                 placeholder="Enter username"
-                                required
+                                aria-required="true"
+                                aria-invalid={!!errors.username}
+                                aria-describedby={
+                                    errors.username
+                                        ? "username-error"
+                                        : undefined
+                                }
                             />
+                            {errors.username && (
+                                <p
+                                    id="username-error"
+                                    className="text-xs text-destructive"
+                                    role="alert"
+                                >
+                                    {errors.username.message}
+                                </p>
+                            )}
                         </div>
 
                         {!isLogin && (
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">
+                                <label
+                                    htmlFor="email"
+                                    className="text-sm font-medium"
+                                >
                                     Email
                                 </label>
                                 <input
+                                    id="email"
                                     type="email"
-                                    value={formData.email}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            email: e.target.value,
-                                        })
-                                    }
+                                    {...registerRegister("email")}
                                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                    placeholder="your.email@example.com"
-                                    required
+                                    placeholder="Enter email"
+                                    aria-required="true"
+                                    aria-invalid={!!errors.email}
+                                    aria-describedby={
+                                        errors.email ? "email-error" : undefined
+                                    }
                                 />
+                                {errors.email && (
+                                    <p
+                                        id="email-error"
+                                        className="text-xs text-destructive"
+                                        role="alert"
+                                    >
+                                        {errors.email.message}
+                                    </p>
+                                )}
                             </div>
                         )}
 
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">
+                            <label
+                                htmlFor="password"
+                                className="text-sm font-medium"
+                            >
                                 Password
                             </label>
                             <input
+                                id="password"
                                 type="password"
-                                value={formData.password}
-                                onChange={(e) =>
-                                    setFormData({
-                                        ...formData,
-                                        password: e.target.value,
-                                    })
-                                }
+                                {...(isLogin
+                                    ? registerLogin("password")
+                                    : registerRegister("password"))}
                                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                placeholder={
-                                    isLogin
-                                        ? "Enter password"
-                                        : "Min 8 chars, alphanumeric"
+                                placeholder="Enter password"
+                                aria-required="true"
+                                aria-invalid={!!errors.password}
+                                aria-describedby={
+                                    errors.password
+                                        ? "password-error"
+                                        : undefined
                                 }
-                                required
                             />
+                            {errors.password && (
+                                <p
+                                    id="password-error"
+                                    className="text-xs text-destructive"
+                                    role="alert"
+                                >
+                                    {errors.password.message}
+                                </p>
+                            )}
                         </div>
 
-                        {(error || auth.error) && (
-                            <div className="rounded-md bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
-                                {error || auth.error}
+                        {auth.error && (
+                            <div
+                                className="rounded-md bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive"
+                                role="alert"
+                            >
+                                {auth.error}
                             </div>
                         )}
 
-                        <button
+                        <Button
                             type="submit"
-                            disabled={loading || auth.loading}
-                            className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:opacity-50"
+                            disabled={isSubmitting}
+                            className="w-full"
+                            aria-busy={isSubmitting}
                         >
-                            {loading || auth.loading
+                            {isSubmitting
                                 ? isLogin
                                     ? "Signing in..."
                                     : "Creating account..."
                                 : isLogin
                                   ? "Sign In"
                                   : "Create Account"}
-                        </button>
+                        </Button>
 
-                        <div className="relative">
-                            <div className="absolute inset-0 flex items-center">
-                                <span className="w-full border-t border-border" />
-                            </div>
-                            <div className="relative flex justify-center text-xs uppercase">
-                                <span className="bg-card px-2 text-muted-foreground">
-                                    Or
-                                </span>
-                            </div>
+                        <div className="text-center">
+                            <button
+                                type="button"
+                                onClick={switchMode}
+                                className="text-sm text-primary hover:underline"
+                                disabled={isSubmitting}
+                            >
+                                {isLogin
+                                    ? "Don't have an account? Sign up"
+                                    : "Already have an account? Sign in"}
+                            </button>
                         </div>
-
-                        <button
-                            type="button"
-                            onClick={switchMode}
-                            className="w-full rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
-                        >
-                            {isLogin
-                                ? "Create new account"
-                                : "Already have an account? Sign in"}
-                        </button>
 
                         {isLogin && (
                             <p className="text-xs text-center text-muted-foreground">

@@ -1,17 +1,19 @@
-import { FIXED_CATEGORIES } from "../constants/categories.js";
+import { Button } from "./ui/button.jsx";
 
 export default function SearchFilters({
+    categories,
     selectedCategory,
-    setSelectedCategory,
+    onCategoryChange,
     fromDate,
-    setFromDate,
+    onFromDateChange,
     toDate,
-    setToDate,
+    onToDateChange,
     loading,
     onSearch,
-    onCreateClick,
-    onCreateCategoryClick,
+    onCreateBlog,
+    onCreateCategory,
     isAdmin,
+    categoriesLoading = false,
 }) {
     return (
         <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
@@ -19,72 +21,89 @@ export default function SearchFilters({
                 <h2 className="text-lg font-semibold">Browse Blogs</h2>
                 <div className="flex items-center gap-2">
                     {isAdmin && (
-                        <button
-                            onClick={onCreateCategoryClick}
-                            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
-                        >
+                        <Button variant="outline" onClick={onCreateCategory}>
                             + Category
-                        </button>
+                        </Button>
                     )}
-                    <button
-                        onClick={onCreateClick}
-                        className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
-                    >
-                        + Create Blog
-                    </button>
+                    <Button onClick={onCreateBlog}>+ Create Blog</Button>
                 </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-4">
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">
+                    <label
+                        htmlFor="category-select"
+                        className="text-sm font-medium"
+                    >
                         Category (optional)
                     </label>
                     <select
+                        id="category-select"
                         value={selectedCategory}
-                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        onChange={(e) => onCategoryChange(e.target.value)}
                         className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        aria-label="Filter by category"
+                        disabled={categoriesLoading}
                     >
-                        <option value="">All Categories</option>
-                        {FIXED_CATEGORIES.map((c) => (
-                            <option key={c} value={c}>
-                                {c}
-                            </option>
-                        ))}
+                        <option value="">
+                            {categoriesLoading
+                                ? "Loading categories..."
+                                : "All Categories"}
+                        </option>
+                        {!categoriesLoading &&
+                            categories.map((c) => (
+                                <option key={c} value={c}>
+                                    {c}
+                                </option>
+                            ))}
                     </select>
                 </div>
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground">
+                    <label
+                        htmlFor="from-date"
+                        className="text-sm font-medium text-muted-foreground"
+                    >
                         From (optional)
                     </label>
                     <input
+                        id="from-date"
                         type="date"
                         value={fromDate}
-                        onChange={(e) => setFromDate(e.target.value)}
+                        onChange={(e) => onFromDateChange(e.target.value)}
                         className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                         disabled={!selectedCategory}
+                        aria-label="Filter from date"
+                        aria-disabled={!selectedCategory}
                     />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground">
+                    <label
+                        htmlFor="to-date"
+                        className="text-sm font-medium text-muted-foreground"
+                    >
                         To (optional)
                     </label>
                     <input
+                        id="to-date"
                         type="date"
                         value={toDate}
-                        onChange={(e) => setToDate(e.target.value)}
+                        onChange={(e) => onToDateChange(e.target.value)}
                         className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                         disabled={!selectedCategory}
+                        aria-label="Filter to date"
+                        aria-disabled={!selectedCategory}
                     />
                 </div>
                 <div className="flex items-end">
-                    <button
+                    <Button
                         onClick={onSearch}
                         disabled={loading}
-                        className="w-full inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:opacity-50"
+                        className="w-full"
+                        aria-busy={loading}
+                        aria-label="Apply filters"
                     >
                         {loading ? "Loading..." : "Filter"}
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>

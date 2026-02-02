@@ -1,25 +1,17 @@
-import { useAuth } from "./hooks/useAuth.js";
-import LoginPage from "./pages/LoginPage.jsx";
-import HomePage from "./pages/HomePage.jsx";
-import { Toaster } from "./components/ui/toaster.jsx";
+import { RouterProvider } from "react-router-dom";
+import { createRouter } from "./routes/index.jsx";
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
+import { AuthProvider } from "./context/AuthContext.jsx";
 
 function App() {
-    const auth = useAuth();
-
-    if (!auth.isAuthenticated) {
-        return (
-            <>
-                <LoginPage auth={auth} />
-                <Toaster />
-            </>
-        );
-    }
+    const router = createRouter();
 
     return (
-        <>
-            <HomePage auth={auth} />
-            <Toaster />
-        </>
+        <AuthProvider>
+            <ErrorBoundary>
+                <RouterProvider router={router} />
+            </ErrorBoundary>
+        </AuthProvider>
     );
 }
 

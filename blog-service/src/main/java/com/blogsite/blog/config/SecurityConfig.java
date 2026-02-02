@@ -28,6 +28,7 @@ public class SecurityConfig {
                         .addFilterBefore(gatewayAuthenticationFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
                         .authorizeHttpRequests(auth -> auth
                                 .requestMatchers("/api/v1.0/blogsite/blogs/**").permitAll()
+                                .requestMatchers("/api/v1.0/blogsite/categories").permitAll()
                                 .anyRequest().authenticated()
                         );
                 return http.build();

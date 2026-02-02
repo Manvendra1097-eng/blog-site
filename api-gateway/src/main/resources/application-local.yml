@@ -9,11 +9,11 @@ spring:
         - id: auth-register-login
           uri: http://localhost:8081
           predicates:
-            - Path=/api/v1.0/blogsite/user/register,/api/v1.0/blogsite/user/login,/api/v1.0/blogsite/user/refresh
+            - Path=/api/v1.0/blogsite/user/register,/api/v1.0/blogsite/user/login,/api/v1.0/blogsite/user/refresh,/api/v1.0/blogsite/user/logout
         - id: blog-category
           uri: http://localhost:8082
           predicates:
-            - Path=/api/v1.0/blogsite/category/**
+            - Path=/api/v1.0/blogsite/category/**,/api/v1.0/blogsite/categories
         - id: blog-user
           uri: http://localhost:8082
           predicates:
@@ -30,7 +30,7 @@ server:
 cors:
   allowed-origins: http://localhost:*,http://127.0.0.1:*
   allowed-methods: GET,POST,PUT,DELETE,OPTIONS
-  allowed-headers: Authorization,Content-Type,Accept
+  allowed-headers: Authorization,Content-Type,Accept,Cookie
   allow-credentials: true
   max-age: 3600
 

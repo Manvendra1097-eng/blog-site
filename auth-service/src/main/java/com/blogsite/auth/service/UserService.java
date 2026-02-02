@@ -22,14 +22,17 @@ public class UserService {
 
     @Transactional
     public User registerUser(String username, String email, String rawPassword, boolean admin) {
+        // Normalize username to prevent case variations
+        String normalizedUsername = username.trim();
+
         if (userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("Email already in use");
         }
-        if (userRepository.existsByUsername(username)) {
+        if (userRepository.existsByUsername(normalizedUsername)) {
             throw new IllegalArgumentException("Username already in use");
         }
         User user = new User();
-        user.setUsername(username);
+        user.setUsername(normalizedUsername);
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(rawPassword));
         if (admin) {
