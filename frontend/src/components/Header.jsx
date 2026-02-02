@@ -1,6 +1,6 @@
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Button } from "./ui/button.jsx";
-import { LogOutIcon, ArrowLeftIcon } from "lucide-react";
+import { LogOutIcon, ArrowLeftIcon, PenLineIcon } from "lucide-react";
 import { useAuth } from "../context/useAuth.js";
 
 export default function Header() {
@@ -49,18 +49,26 @@ export default function Header() {
                                 <ArrowLeftIcon className="h-5 w-5" />
                             </Button>
                         )}
-                        <div>
-                            <h1 className="text-2xl font-bold tracking-tight">
-                                BlogSite
-                            </h1>
-                            <p className="text-sm text-muted-foreground">
-                                {isDetailPage
-                                    ? "Blog Details"
-                                    : isEditOrCreatePage
-                                      ? "Manage Blog"
-                                      : "Discover and share amazing content"}
-                            </p>
-                        </div>
+                        <Link
+                            to="/home"
+                            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                        >
+                            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                                <PenLineIcon className="w-5 h-5 text-primary-foreground" />
+                            </div>
+                            <div>
+                                <h1 className="text-xl font-bold tracking-tight">
+                                    BlogSite
+                                </h1>
+                                <p className="text-xs text-muted-foreground">
+                                    {isDetailPage
+                                        ? "Blog Details"
+                                        : isEditOrCreatePage
+                                          ? "Manage Blog"
+                                          : "Discover and share"}
+                                </p>
+                            </div>
+                        </Link>
                     </div>
 
                     <div className="flex items-center gap-3">

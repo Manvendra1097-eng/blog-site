@@ -2,7 +2,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, useParams, useLocation, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { useAuth } from "../context/useAuth.js";
 import { useCategories } from "../hooks/useCategories.js";
 import { updateBlogRequest, getBlogByIdRequest } from "../services/blogApi.js";
 import { toast } from "sonner";
@@ -79,7 +78,7 @@ export default function EditBlogPage() {
                 article: data.article,
             });
             toast.success("Blog updated successfully!");
-            navigate(`/blog/${blogId}`);
+            navigate(`/home/blog/${blogId}`);
         } catch (err) {
             toast.error(err.message || "Failed to update blog");
         }
@@ -216,7 +215,7 @@ export default function EditBlogPage() {
                                 asChild
                                 disabled={isSubmitting}
                             >
-                                <Link to={`/blog/${blogId}`}>Cancel</Link>
+                                <Link to={`/home/blog/${blogId}`}>Cancel</Link>
                             </Button>
                         </div>
                     </form>

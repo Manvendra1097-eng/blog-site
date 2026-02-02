@@ -40,7 +40,7 @@ export default function CreateBlogPage() {
                 article: data.article,
             });
             toast.success("Blog created successfully!");
-            navigate("/");
+            navigate("/home");
         } catch (err) {
             toast.error(err.message || "Failed to create blog");
         }

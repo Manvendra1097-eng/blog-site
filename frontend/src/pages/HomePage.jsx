@@ -26,7 +26,7 @@ export default function HomePage() {
         useSearchFilters(updateFilters);
 
     const handleCreateBlog = () => {
-        navigate("/blog/create");
+        navigate("/home/blog/create");
     };
 
     const handleCategoryCreated = () => {

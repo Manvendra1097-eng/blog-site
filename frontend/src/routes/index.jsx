@@ -7,6 +7,7 @@ import BlogDetailPage from "../pages/BlogDetailPage.jsx";
 import CreateBlogPage from "../pages/CreateBlogPage.jsx";
 import EditBlogPage from "../pages/EditBlogPage.jsx";
 import NotFoundPage from "../pages/NotFoundPage.jsx";
+import LandingPage from "../pages/LandingPage.jsx";
 
 export const createRouter = () => {
     return createBrowserRouter([
@@ -15,11 +16,15 @@ export const createRouter = () => {
             element: <RootLayout />,
             children: [
                 {
+                    index: true,
+                    element: <LandingPage />,
+                },
+                {
                     path: "login",
                     element: <LoginPage />,
                 },
                 {
-                    path: "/",
+                    path: "home",
                     element: <ProtectedRoute />,
                     children: [
                         {

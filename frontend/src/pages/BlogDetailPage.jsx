@@ -17,7 +17,7 @@ export default function BlogDetailPage() {
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
     const handleEdit = () => {
-        navigate(`/blog/${id}/edit`, { state: { blog } });
+        navigate(`/home/blog/${id}/edit`, { state: { blog } });
     };
 
     const handleDeleteConfirm = () => {

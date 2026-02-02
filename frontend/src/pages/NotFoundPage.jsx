@@ -19,7 +19,9 @@ export default function NotFoundPage() {
                 </div>
 
                 <div className="flex gap-3 justify-center">
-                    <Button onClick={() => navigate("/")}>Go to Home</Button>
+                    <Button onClick={() => navigate("/home")}>
+                        Go to Home
+                    </Button>
                     <Button variant="outline" onClick={() => navigate(-1)}>
                         Go Back
                     </Button>

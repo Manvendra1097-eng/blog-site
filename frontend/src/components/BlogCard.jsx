@@ -9,7 +9,7 @@ const BlogCard = memo(function BlogCard({ blog }) {
         : blog.articleSnippet;
 
     const handleClick = () => {
-        navigate(`/blog/${blog.id}`);
+        navigate(`/home/blog/${blog.id}`);
     };
 
     return (

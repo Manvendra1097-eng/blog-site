@@ -44,7 +44,7 @@ export function useBlogDetail(blogId) {
             });
             toast.success("Blog deleted successfully!");
             invalidateBlogsCache();
-            navigate("/");
+            navigate("/home");
         } catch (err) {
             toast.error(err.message || "Failed to delete blog");
             setDeleting(false);
