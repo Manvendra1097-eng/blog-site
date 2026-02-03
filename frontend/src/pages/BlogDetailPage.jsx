@@ -48,7 +48,7 @@ export default function BlogDetailPage() {
     }
 
     const userCanEdit = canEditBlog(blog, auth.userName);
-    const userCanDelete = canDeleteBlog(blog, auth.userName);
+    const userCanDelete = canDeleteBlog(blog, auth.userName, auth.isAdmin);
 
     return (
         <div className="min-h-screen bg-background">

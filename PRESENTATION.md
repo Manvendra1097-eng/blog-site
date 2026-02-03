@@ -15,6 +15,9 @@
 9. Setup & Deployment
 10. Challenges & Solutions
 11. Future Enhancements
+12. Project Metrics
+13. Learning Outcomes
+14. Conclusion
 
 ---
 
@@ -51,7 +54,7 @@ A microservices-based blogging platform with:
                   ▼
 ┌─────────────────────────────────────────────────────┐
 │         API Gateway (Spring Cloud Gateway)          │
-│         Port: 8080                                  │
+│         Port: 8083                                  │
 │         - Authentication                            │
 │         - Routing                                   │
 │         - CORS Configuration                        │
@@ -105,9 +108,13 @@ A microservices-based blogging platform with:
 |------------|---------|---------|
 | React | 19.2.0 | UI Framework |
 | Vite | 7.3.1 | Build Tool & Dev Server |
+| React Router | 7.5.1 | Client-side Routing |
 | Axios | 1.13.4 | HTTP Client |
+| React Hook Form | 7.54.2 | Form Management |
+| Zod | 3.24.1 | Schema Validation |
 | Tailwind CSS | 4.1.18 | Styling |
 | Lucide React | 0.563.0 | Icons |
+| Sonner | 1.7.3 | Toast Notifications |
 
 ### Development Tools
 - Git for version control
@@ -206,10 +213,12 @@ A microservices-based blogging platform with:
 - ✅ Password hashing (BCrypt)
 - ✅ JWT signature validation
 - ✅ Token type validation (access vs refresh)
+- ✅ HttpOnly cookies for refresh tokens (XSS protection)
 - ✅ Ownership validation for blog operations
 - ✅ CORS configuration
 - ✅ Gateway-level authentication
 - ✅ Secure headers (X-User-Id, X-User-Name, X-User-Roles)
+- ✅ Role-based authorization (ADMIN/USER)
 
 ---
 
@@ -286,6 +295,120 @@ public ResponseEntity<?> addBlog(@PathVariable String blogName, ...) {
 - Cleaner controller methods
 - Can use @PreAuthorize annotations
 - Standard Spring Security practices
+
+### 4. Frontend Architecture & Routing
+
+**React Context API for Auth State:**
+```javascript
+// AuthContext.jsx - Global auth state
+const AuthProvider = ({ children }) => {
+    const [token, setToken] = useState(null);
+    const [userName, setUserName] = useState(null);
+    const [roles, setRoles] = useState([]);
+
+    const isAdmin = roles.includes('ADMIN');
+
+    // Login, logout, and refresh logic
+    return <AuthContext.Provider value={{...}}>
+}
+```
+
+**Protected Routes Structure:**
+```javascript
+// routes/index.jsx
+<Routes>
+    <Route path="/" element={<LandingPage />} />  {/* Public */}
+    <Route path="/login" element={<LoginPage />} /> {/* Public */}
+
+    {/* Protected Routes */}
+    <Route element={<ProtectedRoute />}>
+        <Route path="/home" element={<HomePage />} />
+        <Route path="/home/blog/create" element={<CreateBlogPage />} />
+        <Route path="/home/blog/:id" element={<ViewBlogPage />} />
+        <Route path="/home/blog/edit/:id" element={<EditBlogPage />} />
+    </Route>
+</Routes>
+```
+
+**Benefits:**
+- Centralized auth state management
+- Protected routes with automatic redirect
+- Clean separation of public and authenticated pages
+- Reusable auth hook (useAuth)
+- Consistent header/footer for public pages
+
+### 5. HttpOnly Cookie Implementation
+
+**Backend - Login sets refresh token as cookie:**
+```java
+@PostMapping("/login")
+public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+    // Validate credentials and generate tokens
+    String accessToken = jwtService.generateAccessToken(...);
+    String refreshToken = jwtService.generateRefreshToken(...);
+
+    // Set refresh token as httpOnly cookie
+    ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshToken)
+        .httpOnly(true)  // Not accessible to JavaScript
+        .secure(false)   // Set to true in production (HTTPS)
+        .path("/")
+        .sameSite("Lax")
+        .maxAge(7 * 24 * 60 * 60)  // 7 days
+        .build();
+
+    // Return only accessToken, username, roles in body
+    return ResponseEntity.ok()
+        .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+        .body(Map.of(
+            "accessToken", accessToken,
+            "username", user.getUsername(),
+            "roles", user.getRoles()
+        ));
+}
+```
+
+**Backend - Refresh reads from cookie:**
+```java
+@PostMapping("/refresh")
+public ResponseEntity<?> refresh(
+    @CookieValue(name = "refreshToken", required = false) String refreshToken) {
+
+    if (refreshToken == null || refreshToken.isBlank()) {
+        return ResponseEntity.status(401).body("No refresh token");
+    }
+
+    // Validate and generate new tokens
+    String newAccessToken = jwtService.generateAccessToken(...);
+    String newRefreshToken = jwtService.generateRefreshToken(...);
+
+    // Return new refresh token as cookie
+    ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", newRefreshToken)
+        .httpOnly(true)
+        .secure(false)
+        .path("/")
+        .sameSite("Lax")
+        .maxAge(7 * 24 * 60 * 60)
+        .build();
+
+    return ResponseEntity.ok()
+        .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+        .body(Map.of("accessToken", newAccessToken, "username", username));
+}
+```
+
+**Frontend - Axios sends credentials:**
+```javascript
+export const apiClient = axios.create({
+    baseURL: API_BASE,
+    withCredentials: true  // Sends httpOnly cookies automatically
+});
+```
+
+**Benefits:**
+- Refresh token not accessible to JavaScript (XSS protection)
+- Automatically sent with requests
+- Server-side cookie management
+- Enhanced security posture
 
 ---
 
@@ -366,27 +489,34 @@ public ResponseEntity<?> addBlog(@PathVariable String blogName, ...) {
 ```json
 {
     "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
-    "refreshToken": "eyJhbGciOiJIUzI1NiJ9...",
     "username": "admin",
     "roles": ["ADMIN", "USER"]
 }
 ```
+**Response Headers:**
+```
+Set-Cookie: refreshToken=eyJhbGciOiJIUzI1NiJ9...; Path=/; Max-Age=604800; HttpOnly; SameSite=Lax
+```
+**Note:** Refresh token is sent as httpOnly cookie, not in response body for security.
 
 #### POST /api/v1.0/blogsite/user/refresh
-**Request:**
-```json
-{
-    "refreshToken": "eyJhbGciOiJIUzI1NiJ9..."
-}
+**Request:** No body required
+**Request Headers:**
+```
+Cookie: refreshToken=eyJhbGciOiJIUzI1NiJ9...
 ```
 **Response:** 200 OK
 ```json
 {
     "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
-    "refreshToken": "eyJhbGciOiJIUzI1NiJ9...",
     "username": "admin"
 }
 ```
+**Response Headers:**
+```
+Set-Cookie: refreshToken=eyJhbGciOiJIUzI1NiJ9...; Path=/; Max-Age=604800; HttpOnly; SameSite=Lax
+```
+**Note:** Refresh token sent via httpOnly cookie automatically by browser.
 
 ### Blog Service (Port 8082)
 
@@ -497,7 +627,7 @@ stop-services.bat
 
 ### Access Points
 - **Frontend:** http://localhost:5173
-- **API Gateway:** http://localhost:8080
+- **API Gateway:** http://localhost:8083
 - **Auth Service:** http://localhost:8081
 - **Blog Service:** http://localhost:8082
 
@@ -509,10 +639,66 @@ stop-services.bat
 
 ---
 
-## 10. Future Enhancements
+## 10. Challenges & Solutions
+
+### Challenge 1: Token Expiration UX
+**Problem:** Users would get logged out every 15 minutes when access token expired.
+
+**Solution:** Implemented automatic token refresh using Axios interceptors.
+- Intercepts 401 responses
+- Automatically calls refresh endpoint
+- Retries original request with new token
+- User experiences seamless 7-day sessions
+
+### Challenge 2: Security vs Simplicity
+**Problem:** Redis added complexity without significant benefit for our use case.
+
+**Solution:** Removed Redis, using stateless JWT approach.
+- Reduced infrastructure requirements
+- Faster token validation (no Redis lookup)
+- Easier deployment and scaling
+- Still secure with short-lived access tokens
+
+### Challenge 3: Port Conflicts in Docker
+**Problem:** Port 8080 already in use on deployment machines.
+
+**Solution:** Changed API Gateway to port 8083.
+- Updated docker-compose.yml
+- Updated frontend API configuration
+- Now uses: 8081 (Auth), 8082 (Blog), 8083 (Gateway)
+
+### Challenge 4: React Fast Refresh Warnings
+**Problem:** Context export and component export in same file broke Fast Refresh.
+
+**Solution:** Separated exports into multiple files.
+- authContext.js: exports AuthContext
+- AuthContext.jsx: exports AuthProvider component
+- useAuth.js: exports useAuth hook
+
+### Challenge 5: Admin Authorization
+**Problem:** Initially checked admin by username === "admin" (hardcoded, insecure).
+
+**Solution:** Implemented role-based authorization.
+- Roles returned from backend login
+- Stored in AuthContext and localStorage
+- Computed `isAdmin` property in context
+- Used consistently across app
+
+### Challenge 6: Public vs Protected UI
+**Problem:** Landing page needed for non-authenticated users, but all routes were protected.
+
+**Solution:** Created public route structure with shared components.
+- LandingPage at "/" (public)
+- LoginPage with public header/footer
+- Protected routes under "/home/*"
+- PublicHeader and PublicFooter components for consistency
+
+---
+
+## 11. Future Enhancements
 
 ### Security
-- [ ] HttpOnly cookies for tokens (prevent XSS)
+
 - [ ] Refresh token rotation (new refresh token on each refresh)
 - [ ] Database-backed refresh tokens (enable server-side revocation)
 - [ ] Rate limiting (prevent brute force attacks)

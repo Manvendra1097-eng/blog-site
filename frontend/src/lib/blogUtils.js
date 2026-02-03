@@ -53,6 +53,6 @@ export function canEditBlog(blog, userName) {
 /**
  * Check if user can delete blog
  */
-export function canDeleteBlog(blog, userName) {
-    return isAdminUser(userName) || canEditBlog(blog, userName);
+export function canDeleteBlog(blog, userName, isAdmin) {
+    return isAdmin || canEditBlog(blog, userName);
 }
